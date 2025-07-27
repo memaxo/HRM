@@ -5,6 +5,7 @@ import math
 import yaml
 import shutil
 import warnings
+import subprocess
 
 import torch
 
@@ -389,6 +390,14 @@ def load_synced_config(hydra_config: DictConfig, rank: int, world_size: int) -> 
     return objects[0]  # type: ignore
 
 
+def _get_system_memory_gb():
+    try:
+        total_bytes = int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']).strip())
+        return total_bytes / (1024**3)
+    except Exception:
+        return None
+
+
 @hydra.main(config_path="config", config_name="cfg_pretrain", version_base=None)
 def launch(hydra_config: DictConfig):
     RANK = 0
@@ -408,9 +417,19 @@ def launch(hydra_config: DictConfig):
     config = load_synced_config(hydra_config, rank=RANK, world_size=WORLD_SIZE)
 
     # Auto-adjust batch size for Apple-Silicon GPUs
-    if device.type == "mps" and config.global_batch_size > 192:
-        warnings.warn("Reducing global_batch_size to 192 for MPS")
-        config.global_batch_size = 192
+    if device.type == "mps":
+        mem_gb = _get_system_memory_gb() or 16
+        optimal = int(mem_gb * 12)
+        # Only adjust when necessary: reduce if too large or increase on high-memory systems
+        if config.global_batch_size > optimal:
+            action = "Reducing"
+        elif mem_gb > 32 and config.global_batch_size < optimal:
+            action = "Increasing"
+        else:
+            action = None
+        if action:
+            warnings.warn(f"{action} global_batch_size to {optimal} for MPS (system memory: {mem_gb:.1f} GB)")
+            config.global_batch_size = optimal
 
     # Seed RNGs to ensure consistency
     torch.random.manual_seed(config.seed + RANK)
