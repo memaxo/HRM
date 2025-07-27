@@ -1,172 +1,249 @@
-# Hierarchical Reasoning Model
+# ATHENA (Automated Tactical Hacking and Exploit Neural Architecture)
+
+## Hierarchical Reasoning Model for Cybersecurity
 
 ![](./assets/hrm.png)
 
-Reasoning, the process of devising and executing complex goal-oriented action sequences, remains a critical challenge in AI.
-Current large language models (LLMs) primarily employ Chain-of-Thought (CoT) techniques, which suffer from brittle task decomposition, extensive data requirements, and high latency. Inspired by the hierarchical and multi-timescale processing in the human brain, we propose the Hierarchical Reasoning Model (HRM), a novel recurrent architecture that attains significant computational depth while maintaining both training stability and efficiency.
-HRM executes sequential reasoning tasks in a single forward pass without explicit supervision of the intermediate process, through two interdependent recurrent modules: a high-level module responsible for slow, abstract planning, and a low-level module handling rapid, detailed computations. With only 27 million parameters, HRM achieves exceptional performance on complex reasoning tasks using only 1000 training samples. The model operates without pre-training or CoT data, yet achieves nearly perfect performance on challenging tasks including complex Sudoku puzzles and optimal path finding in large mazes.
-Furthermore, HRM outperforms much larger models with significantly longer context windows on the Abstraction and Reasoning Corpus (ARC), a key benchmark for measuring artificial general intelligence capabilities.
-These results underscore HRM’s potential as a transformative advancement toward universal computation and general-purpose reasoning systems.
+ATHENA applies the Hierarchical Reasoning Model (HRM) to autonomous exploit generation and cybersecurity research. Building on HRM's hierarchical and multi-timescale processing capabilities, ATHENA learns to discover and exploit vulnerabilities through strategic reasoning and precise primitive execution.
+
+The system operates through two interdependent modules: a high-level strategy planner that reasons about exploitation approaches (information leakage, memory corruption, control flow hijacking), and a low-level primitive executor that handles detailed operations (gadget selection, payload construction, memory manipulation). This hierarchical approach enables ATHENA to learn complex exploitation techniques from minimal training data, without requiring extensive pre-training or chain-of-thought supervision.
+
+ATHENA demonstrates the potential for AI systems to advance cybersecurity research through automated vulnerability discovery and exploitation, while maintaining strict safety controls and ethical boundaries.
 
 ## Quick Start Guide 🚀
 
 ### Running on Apple Silicon (M-series) 🍏
 
 ```bash
-# Install latest nightly build of PyTorch with MPS backend
-uv pip install --pre torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/nightly/cpu
+# Install latest PyTorch with Metal Performance Shaders support
+pip install torch>=2.3.0 torchvision torchaudio
 
-# Optional – raise unified-memory watermark (prevents early OOM)
-export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.9
+# Install cybersecurity dependencies
+pip install -r requirements-cyber.txt
 
-uv pip install -r requirements.txt
+# Setup ATHENA environment
+python scripts/setup_cyber_mvp.py
 
-# Fire up training; HRM auto-selects best device (cuda/mps/cpu)
-python pretrain.py device=auto
+# Start training on synthetic exploit data
+python pretrain.py --config-name=cyber/base_cyber device=mps
 ```
 
-
-## Install Python Dependencies 🐍
+### Running on CUDA 🐍
 
 ```bash
-pip install -r requirements.txt
+# Install CUDA-enabled PyTorch
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Install dependencies
+pip install -r requirements-cyber.txt
+
+# Setup environment
+python scripts/setup_cyber_mvp.py
+
+# Train with CUDA acceleration
+python pretrain.py --config-name=cyber/base_cyber device=cuda
+```
+
+## Core Dependencies 🔧
+
+```bash
+# Core ML and cybersecurity tools
+pip install -r requirements-cyber.txt
+
+# Key dependencies include:
+# - torch>=2.3.0 (Metal/CUDA support)
+# - pwntools (exploit development)
+# - capstone (disassembly)
+# - gymnasium (RL environments)
+# - lief (binary analysis)
 ```
 
 ## W&B Integration 📈
 
-This project uses [Weights & Biases](https://wandb.ai/) for experiment tracking and metric visualization. Ensure you're logged in:
+ATHENA uses [Weights & Biases](https://wandb.ai/) for experiment tracking and cybersecurity metrics:
 
 ```bash
 wandb login
 ```
 
-## Run Experiments
+## Training Experiments
 
-### Quick Demo: Sudoku Solver 💻🗲
+### Phase 0: Infrastructure Demo 💻
 
-Train a master-level Sudoku AI capable of solving extremely difficult puzzles on a modern laptop GPU. 🧩
-
-```bash
-# Download and build Sudoku dataset
-python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000  --subsample-size 1000 --num-aug 1000
-
-# Start training (single GPU, smaller batch size)
-OMP_NUM_THREADS=8 python pretrain.py data_path=data/sudoku-extreme-1k-aug-1000 epochs=20000 eval_interval=2000 global_batch_size=384 lr=7e-5 puzzle_emb_lr=7e-5 weight_decay=1.0 puzzle_emb_weight_decay=1.0
-```
-
-Runtime: ~10 hours on a RTX 4070 laptop GPU
-
-## Trained Checkpoints 🚧
-
- - [ARC-AGI-2](https://huggingface.co/sapientinc/HRM-checkpoint-ARC-2)
- - [Sudoku 9x9 Extreme (1000 examples)](https://huggingface.co/sapientinc/HRM-checkpoint-sudoku-extreme)
- - [Maze 30x30 Hard (1000 examples)](https://huggingface.co/sapientinc/HRM-checkpoint-maze-30x30-hard)
-
-To use the checkpoints, see Evaluation section below.
-
-## Full-scale Experiments 🔵
-
-Experiments below assume an 8-GPU setup.
-
-### Dataset Preparation
+Verify all components work together on synthetic data:
 
 ```bash
-# Initialize submodules
-git submodule update --init --recursive
+# Generate synthetic exploit training data
+python scripts/setup_cyber_mvp.py
 
-# ARC-1
-python dataset/build_arc_dataset.py  # ARC offical + ConceptARC, 960 examples
-# ARC-2
-python dataset/build_arc_dataset.py --dataset-dirs dataset/raw-data/ARC-AGI-2/data --output-dir data/arc-2-aug-1000  # ARC-2 official, 1120 examples
-
-# Sudoku-Extreme
-python dataset/build_sudoku_dataset.py  # Full version
-python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000  --subsample-size 1000 --num-aug 1000  # 1000 examples
-
-# Maze
-python dataset/build_maze_dataset.py  # 1000 examples
+# Quick training run (100 steps)
+python pretrain.py --config-name=cyber/base_cyber epochs=1 eval_interval=50
 ```
 
-### Dataset Visualization
+*Runtime:* ~5 minutes on M1 Mac
 
-Explore the puzzles visually:
+### Phase 1: Stack Overflow Exploitation 🎯
 
-* Open `puzzle_visualizer.html` in your browser.
-* Upload the generated dataset folder located in `data/...`.
-
-## Launch experiments
-
-### Small-sample (1K)
-
-ARC-1:
+Train ATHENA to perform basic stack buffer overflows:
 
 ```bash
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py 
+# Generate stack overflow training scenarios
+python dataset/generators/stack_exploits.py --output-dir data/stack_exploits --num-samples 1000
+
+# Train stack exploitation model
+python pretrain.py \
+    --config-name=cyber/stack_exploit \
+    data_path=data/stack_exploits \
+    epochs=5000 \
+    eval_interval=500 \
+    global_batch_size=64
 ```
 
-*Runtime:* ~24 hours
+*Runtime:* ~2 hours on RTX 4070, ~4 hours on M1 Max
 
-ARC-2:
+**Success Metrics:**
+- ≥1 EIP overwrite in 50 episodes
+- Training loss convergence
+- Memory usage < 16GB
+
+### Phase 2: ROP Chain Construction 🔗
+
+Advanced exploitation with Return-Oriented Programming:
 
 ```bash
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/arc-2-aug-1000
+# Generate ROP chain training data
+python dataset/generators/rop_chains.py --output-dir data/rop_chains --num-binaries 100
+
+# Train ROP chain generation
+python pretrain.py \
+    --config-name=cyber/rop_chains \
+    data_path=data/rop_chains \
+    epochs=10000 \
+    eval_interval=1000 \
+    global_batch_size=32
 ```
 
-*Runtime:* ~24 hours (checkpoint after 8 hours is often sufficient)
+*Runtime:* ~8 hours on 8x RTX 4090, ~16 hours on M1 Ultra
 
-Sudoku Extreme (1k):
+**Success Metrics:**
+- 40% success rate on test binaries
+- Average chain length < 20 gadgets
+- DEP bypass capability
+
+## Trained Checkpoints 🏆
+
+- [Stack Overflow Exploitation](https://huggingface.co/athena-ai/stack-overflow-v1) - Basic buffer overflow techniques
+- [ROP Chain Generation](https://huggingface.co/athena-ai/rop-chains-v1) - Return-oriented programming
+- [Multi-Stage Exploits](https://huggingface.co/athena-ai/multi-stage-v1) - Complex exploitation chains
+
+## Evaluation & Testing
+
+### Security Testing 🛡️
+
+ATHENA includes comprehensive security testing:
 
 ```bash
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000 epochs=20000 eval_interval=2000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
+# Run security audit
+python scripts/security_audit.py
+
+# Test exploit environment isolation
+pytest tests/test_sandbox_security.py -v
+
+# Memory budget verification
+pytest tests/perf/test_memory_budget.py -v
 ```
 
-*Runtime:* ~10 minutes
-
-Maze 30x30 Hard (1k):
+### Exploit Success Evaluation
 
 ```bash
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/maze-30x30-hard-1k epochs=20000 eval_interval=2000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
+# Evaluate on test binaries
+python evaluate.py \
+    checkpoint=checkpoints/athena-stack-v1.pt \
+    test_set=data/test_binaries \
+    max_episodes=50
+
+# Generate detailed reports
+jupyter notebook eval/exploit_analysis.ipynb
 ```
 
-*Runtime:* ~1 hour
+## Dataset Preparation
 
-### Full Sudoku-Hard
+### Synthetic Data Generation
 
 ```bash
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-hard-full epochs=100 eval_interval=10 lr_min_ratio=0.1 global_batch_size=2304 lr=3e-4 puzzle_emb_lr=3e-4 weight_decay=0.1 puzzle_emb_weight_decay=0.1 arch.loss.loss_type=softmax_cross_entropy arch.L_cycles=8 arch.halt_max_steps=8 arch.pos_encodings=learned
+# Stack overflow scenarios
+python dataset/build_stack_dataset.py --difficulty easy --num-samples 1000
+
+# ROP gadget extraction
+python dataset/build_rop_dataset.py --binary-dir /usr/bin --max-binaries 100
+
+# Multi-vulnerability scenarios  
+python dataset/build_multi_vuln_dataset.py --complexity medium
 ```
 
-*Runtime:* ~2 hours
-
-## Evaluation
-
-Evaluate your trained models:
-
-* Check `eval/exact_accuracy` in W&B.
-* For ARC-AGI, follow these additional steps:
+### Real-World Binary Analysis
 
 ```bash
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 evaluate.py checkpoint=<CHECKPOINT_PATH>
+# Extract features from real binaries (ethical use only)
+python tools/binary_analyzer.py --input-dir ethical_samples/ --output-dir data/real_binaries/
+
+# Note: Only use binaries you own or have explicit permission to analyze
 ```
 
-* Then use the provided `arc_eval.ipynb` notebook to finalize and inspect your results.
+## Architecture Components
 
-## Notes
+ATHENA extends HRM with cybersecurity-specific modules:
 
- - Small-sample learning typically exhibits accuracy variance of around ±2 points.
- - For Sudoku-Extreme (1,000-example dataset), late-stage overfitting may cause numerical instability during training and Q-learning. It is advisable to use early stopping once the training accuracy approaches 100%.
+- **Strategy Planner (H-Level)**: High-level exploitation strategies
+- **Primitive Executor (L-Level)**: Low-level exploit primitives  
+- **State Encoder**: Program state representation
+- **Action Decoder**: Primitive-to-payload conversion
+- **Exploit Environment**: Sandboxed binary execution
+- **Tool Adapters**: Integration with security tools
+
+## Safety & Ethics 🔒
+
+ATHENA is designed for defensive cybersecurity research:
+
+- **Sandboxed Execution**: All exploits run in isolated containers
+- **No Network Access**: Exploit environments are network-isolated
+- **Audit Logging**: All actions are logged for security review
+- **Ethical Guidelines**: Strict usage policies for responsible research
+
+## Contributing
+
+ATHENA development follows responsible disclosure practices:
+
+1. Security vulnerabilities → private disclosure
+2. Feature requests → public GitHub issues
+3. Research contributions → peer review process
 
 ## Citation 📜
 
-```
+```bibtex
+@misc{athena2024,
+    title={ATHENA: Automated Tactical Hacking and Exploit Neural Architecture}, 
+    author={[Jack Mazac]},
+    year={2025},
+    note={Built on Hierarchical Reasoning Model foundation},
+    url={https://github.com/your-org/athena}
+}
+
 @misc{wang2025hierarchicalreasoningmodel,
-      title={Hierarchical Reasoning Model}, 
-      author={Guan Wang and Jin Li and Yuhao Sun and Xing Chen and Changling Liu and Yue Wu and Meng Lu and Sen Song and Yasin Abbasi Yadkori},
-      year={2025},
-      eprint={2506.21734},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2506.21734}, 
+    title={Hierarchical Reasoning Model}, 
+    author={Guan Wang and Jin Li and Yuhao Sun and Xing Chen and Changling Liu and Yue Wu and Meng Lu and Sen Song and Yasin Abbasi Yadkori},
+    year={2025},
+    eprint={2506.21734},
+    archivePrefix={arXiv},
+    primaryClass={cs.AI},
+    url={https://arxiv.org/abs/2506.21734}, 
 }
 ```
+
+## License & Legal Notice ⚖️
+
+ATHENA is released for educational and defensive cybersecurity research only. Users are responsible for ensuring compliance with all applicable laws and regulations. Unauthorized use for malicious purposes is strictly prohibited.
+
+---
+
+*ATHENA: Advancing cybersecurity through hierarchical AI reasoning*

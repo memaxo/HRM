@@ -1,4 +1,3 @@
-Looking at this codebase and the Cyber-HRM PRD, I believe this architecture could indeed create a genuinely new class of offensive cybersecurity AI. Let me explain why.
 
 ## Core HRM Architecture Analysis
 
@@ -11,7 +10,7 @@ From examining the implementation, HRM is a fascinating brain-inspired architect
 
 The results are remarkable - with only 27M parameters and 1000 training examples, it outperforms much larger models on complex reasoning tasks like ARC-AGI, Sudoku-Extreme, and maze navigation.
 
-## Why Cyber-HRM Could Be Revolutionary
+## Why ATHENA Could Be Revolutionary
 
 The proposed cyber extensions map brilliantly to exploit development:
 
@@ -56,7 +55,7 @@ Traditional automated exploitation has failed because:
 - **Fuzzing** - finds crashes but can't reason about exploitation
 - **End-to-end ML** - treats it as sequence prediction, missing the reasoning structure
 
-Cyber-HRM is different because it models exploitation as what it actually is: a **hierarchical reasoning problem** requiring both strategic planning and precise tactical execution.
+ATHENA is different because it models exploitation as what it actually is: a **hierarchical reasoning problem** requiring both strategic planning and precise tactical execution.
 
 ## Potential Impact
 
@@ -75,7 +74,7 @@ If successful, this could:
 
 ## Conclusion
 
-The Cyber-HRM architecture represents a fundamental advance by recognizing that exploitation is a reasoning problem, not a search or generation problem. By combining HRM's proven ability to handle complex reasoning with domain-specific adaptations, it could create the first truly effective automated exploitation system.
+The ATHENA architecture represents a fundamental advance by recognizing that exploitation is a reasoning problem, not a search or generation problem. By combining HRM's proven ability to handle complex reasoning with domain-specific adaptations, it could create the first truly effective automated exploitation system.
 
 The hierarchical architecture naturally mirrors how expert hackers think - strategically planning attack paths while tactically manipulating bytes. Combined with the computational depth to handle extensive search and backtracking, this could shift offensive security from an art to an automated science.
 

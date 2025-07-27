@@ -1,4 +1,4 @@
-# Cyber-HRM v1.0: Product Requirements Document
+# ATHENA v1.0: Product Requirements Document
 
 ## Architecture Overview
 
@@ -15,7 +15,7 @@
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Cyber Extensions                          │
+│                    ATHENA Extensions                          │
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐   │
 │  │  Strategy   │  │  Primitive   │  │  State         │   │
 │  │  Vocabulary │  │  Decoder     │  │  Encoder       │   │
@@ -41,8 +41,8 @@ HRM/
 │   │   ├── hrm_act_v1.py          # [MODIFIED] Add strategy/primitive heads
 │   │   └── strategy_vocab.py      # [NEW] Action vocabulary
 │   ├── encoders/
-│   │   └── efficient_encoders.py  # [MODIFIED] Add cyber encoders
-│   └── losses.py                  # [MODIFIED] Add cyber losses
+│   │   └── efficient_encoders.py  # [MODIFIED] Add athena encoders
+│   └── losses.py                  # [MODIFIED] Add athena losses
 ├── exploit_gym/
 │   ├── envs/
 │   │   └── minimal_exploit_env.py # [NEW] Exploit environment
@@ -50,7 +50,7 @@ HRM/
 │       ├── action_decoder.py      # [NEW] Primitive decoder
 │       └── state_encoder.py       # [NEW] State tensor encoding
 ├── dataset/
-│   ├── cyber_dataset.py          # [NEW] Cyber data loader
+│   ├── athena_dataset.py          # [NEW] ATHENA data loader
 │   └── generators/
 │       └── expert_demonstrations.py # [NEW] Imitation learning data
 ├── adapters/
@@ -60,13 +60,13 @@ HRM/
 │   ├── device_config.py          # [NEW] Unified device management
 │   └── state_encoder.py          # [NEW] State encoding utilities
 ├── configs/
-│   ├── cyber_metal.yaml          # [NEW] Metal-optimized config
+│   ├── athena_metal.yaml          # [NEW] Metal-optimized config
 │   └── milestones.yaml           # [NEW] Project milestones
 ├── scripts/
-│   ├── setup_cyber_mvp.py        # [NEW] One-click setup
+│   ├── setup_athena_mvp.py        # [NEW] One-click setup
 │   └── security_audit.py         # [NEW] Security testing
 └── tests/
-    ├── test_cyber_mvp.py         # [NEW] MVP tests
+    ├── test_athena_mvp.py         # [NEW] MVP tests
     ├── perf/
     │   └── test_memory_budget.py # [NEW] Memory testing
     └── integration/
@@ -305,7 +305,7 @@ import torch
 import numpy as np
 from typing import Dict, Any, List
 
-class CyberStateEncoder:
+class ATHENAStateEncoder:
     """
     Dynamic state encoder with variable-length support
     
@@ -411,7 +411,7 @@ Maximum gadgets: 255 (limited by uint8 counter)
 
 # Unit test
 def test_variable_gadgets():
-    encoder = CyberStateEncoder()
+    encoder = ATHENAStateEncoder()
     
     # Test with many gadgets
     state = {
@@ -656,7 +656,7 @@ class TestMemoryBudget:
             'L_layers': 8,
             'halt_max_steps': 8,
             'use_strategies': True,
-            'enable_cyber': True,
+            'enable_athena': True,
             'num_puzzle_identifiers': 1,
             'puzzle_emb_ndim': 0,
             'H_cycles': 1,
@@ -972,10 +972,10 @@ class ExpertROPGenerator:
         return primitives
 ```
 
-### 5.3 Cyber Dataset Implementation
+### 5.3 ATHENA Dataset Implementation
 
 ```python
-# File: dataset/cyber_dataset.py
+# File: dataset/athena_dataset.py
 # Purpose: Minimal dataset leveraging existing formats
 # Dependencies: torch, numpy, puzzle_dataset
 
@@ -984,9 +984,9 @@ import numpy as np
 import torch
 import os
 
-class CyberDataset(PuzzleDataset):
+class ATHENADataset(PuzzleDataset):
     """
-    Reuse PuzzleDataset infrastructure for cyber data
+    Reuse PuzzleDataset infrastructure for athena data
     Just change the data loading
     """
     
@@ -994,7 +994,7 @@ class CyberDataset(PuzzleDataset):
         # Initialize parent
         super().__init__(config, split)
         
-        # Override metadata for cyber
+        # Override metadata for athena
         self.metadata.vocab_size = 256  # Byte tokens
         self.metadata.seq_len = 1024    # Metal-optimized
         
@@ -1060,7 +1060,7 @@ ENTRYPOINT ["/runner"]
 # File: docker-compose.yml (security settings)
 services:
   exploit-env:
-    image: cyber-sandbox:v1
+    image: athena-sandbox:v1
     security_opt:
       - no-new-privileges:true
       - seccomp:sandbox/seccomp_profile.json
@@ -1119,7 +1119,7 @@ except Exception as e:
         'docker', 'run', '--rm',
         '--security-opt', 'seccomp=sandbox/seccomp_profile.json',
         '--network', 'none',
-        'cyber-sandbox:v1',
+        'athena-sandbox:v1',
         'python3', '-c', test_script
     ], capture_output=True, text=True)
     
@@ -1132,7 +1132,7 @@ def test_resource_limits():
         'docker', 'run', '--rm',
         '--memory', '128m',
         '--pids-limit', '50',
-        'cyber-sandbox:v1',
+        'athena-sandbox:v1',
         'sh', '-c', ':(){ :|:& };:'
     ], capture_output=True, timeout=5)
     
@@ -1273,7 +1273,7 @@ def test_single_exploit_episode():
         'L_layers': 4,
         'halt_max_steps': 8,
         'use_strategies': True,
-        'enable_cyber': True,
+        'enable_athena': True,
         'num_puzzle_identifiers': 1,
         'puzzle_emb_ndim': 0,
         'H_cycles': 1,
@@ -1368,7 +1368,7 @@ def test_single_exploit_episode():
 ### 9.1 Metal-Optimized Config
 
 ```yaml
-# File: configs/cyber_metal.yaml
+# File: configs/athena_metal.yaml
 # Metal-optimized configuration
 
 defaults:
@@ -1382,15 +1382,15 @@ device: mps  # Metal Performance Shaders
 arch:
   hidden_size: 768  # Full size
   seq_len: 1024     # Metal-compatible
-  enable_cyber: true
+  enable_athena: true
   use_strategies: true
 
 # Leverage unified memory
 global_batch_size: 128  # Large batch feasible
 
 # Data
-data_path: data/cyber_synthetic
-dataset_mode: cyber
+data_path: data/athena_synthetic
+dataset_mode: athena
 
 # Training
 epochs: 100
@@ -1406,7 +1406,7 @@ lr_warmup_steps: 1000
 ### 9.2 Setup Script
 
 ```python
-# File: scripts/setup_cyber_mvp.py
+# File: scripts/setup_athena_mvp.py
 # One-click setup script
 
 import subprocess
@@ -1414,17 +1414,17 @@ import os
 import sys
 
 def setup_mvp():
-    """Set up minimal cyber-HRM environment"""
+    """Set up minimal ATHENA environment"""
     
     # 1. Install dependencies
     print("Installing dependencies...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements-cyber.txt"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements-athena.txt"])
     
     # 2. Create minimal directory structure
     os.makedirs("exploit_gym/envs", exist_ok=True)
-    os.makedirs("dataset/cyber", exist_ok=True)
-    os.makedirs("configs/cyber", exist_ok=True)
-    os.makedirs("data/cyber_synthetic", exist_ok=True)
+    os.makedirs("dataset/athena", exist_ok=True)
+    os.makedirs("configs/athena", exist_ok=True)
+    os.makedirs("data/athena_synthetic", exist_ok=True)
     
     # 3. Generate synthetic data
     print("Generating synthetic training data...")
@@ -1453,7 +1453,7 @@ def generate_synthetic_data():
         'puzzle_identifiers': np.arange(n_samples, dtype=np.int32),
     }
     
-    np.savez("data/cyber_synthetic/train.npz", **data)
+    np.savez("data/athena_synthetic/train.npz", **data)
     print(f"Generated {n_samples} synthetic samples")
 
 if __name__ == "__main__":
@@ -1465,7 +1465,7 @@ if __name__ == "__main__":
 ## 10. Dependencies
 
 ```txt
-# File: requirements-cyber.txt
+# File: requirements-athena.txt
 # Leverage mature libraries instead of custom code
 
 # Core ML (Metal-compatible)
@@ -1523,12 +1523,12 @@ def create_dataloader(config: Config, split: str):
     
     # Import both dataset types
     from puzzle_dataset import PuzzleDataset
-    from dataset.cyber_dataset import CyberDataset
+    from dataset.athena_dataset import ATHENADataset
     
     # Select dataset class based on config
     dataset_mode = getattr(config, 'dataset_mode', 'puzzle')
-    if dataset_mode == 'cyber':
-        dataset_class = CyberDataset
+    if dataset_mode == 'athena':
+        dataset_class = ATHENADataset
     else:
         dataset_class = PuzzleDataset
     
@@ -1551,7 +1551,7 @@ def create_dataloader(config: Config, split: str):
 def train_batch(model, batch, ...):
     # ... existing code ...
     
-    # Route cyber labels if present
+    # Route athena labels if present
     if 'primitive_labels' in batch:
         carry.current_data['primitive_labels'] = batch['primitive_labels']
     if 'strategy_labels' in batch:
@@ -1598,6 +1598,6 @@ These targeted fixes address all critical issues identified in the peer review w
 7. **Lean implementation** - Leverages existing libraries to minimize custom code
 8. **Metal-first development** - Optimized for M4 Max with 128GB unified memory
 9. **Complete loss wiring** - Both strategy and primitive heads properly trained
-10. **Dataset routing** - Cyber dataset integrated with existing infrastructure
+10. **Dataset routing** - ATHENA dataset integrated with existing infrastructure
 
-With these changes, Cyber-HRM v1.0 is ready for immediate implementation with high confidence of meeting Sprint-0 deliverables.
+With these changes, ATHENA v1.0 is ready for immediate implementation with high confidence of meeting Sprint-0 deliverables.
