@@ -226,7 +226,7 @@ ATHENA development follows responsible disclosure practices:
     author={[Jack Mazac]},
     year={2025},
     note={Built on Hierarchical Reasoning Model foundation},
-    url={https://github.com/your-org/athena}
+    url={https://github.com/memaxo/HRM}
 }
 
 @misc{wang2025hierarchicalreasoningmodel,
