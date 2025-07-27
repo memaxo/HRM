@@ -10,6 +10,22 @@ These results underscore HRM’s potential as a transformative advancement towar
 
 ## Quick Start Guide 🚀
 
+### Running on Apple Silicon (M-series) 🍏
+
+```bash
+# Install latest nightly build of PyTorch with MPS backend
+pip install --pre torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/nightly/cpu
+
+# Optional – raise unified-memory watermark (prevents early OOM)
+export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.9
+
+# Fire up training; HRM auto-selects best device (cuda/mps/cpu)
+python pretrain.py device=auto
+```
+
+---
+
 ### Prerequisites ⚙️
 
 Ensure PyTorch and CUDA are installed. The repo needs CUDA extensions to be built. If not present, run the following commands:

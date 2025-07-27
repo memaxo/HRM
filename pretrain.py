@@ -4,6 +4,16 @@ import os
 import math
 import yaml
 import shutil
+import warnings
+
+def get_default_device():
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+device = get_default_device()
 
 import torch
 import torch.distributed as dist
@@ -121,11 +131,13 @@ def create_model(config: PretrainConfig, train_metadata: PuzzleDatasetMetadata, 
     model_cls = load_model_class(config.arch.name)
     loss_head_cls = load_model_class(config.arch.loss.name)
 
-    with torch.device("cuda"):
+    with torch.device(device):
         model: nn.Module = model_cls(model_cfg)
         model = loss_head_cls(model, **config.arch.loss.__pydantic_extra__)  # type: ignore
-        if "DISABLE_COMPILE" not in os.environ:
+        if device.type == "cuda" and "DISABLE_COMPILE" not in os.environ:
             model = torch.compile(model, dynamic=False)  # type: ignore
+        elif os.getenv("TORCH_COMPILE_MPS") == "1":
+            model = torch.compile(model, backend="aot_eager")  # type: ignore
 
         # Broadcast parameters from rank 0
         if world_size > 1:
@@ -212,11 +224,11 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
         return
 
     # To device
-    batch = {k: v.cuda() for k, v in batch.items()}
+    batch = {k: v.to(device) for k, v in batch.items()}
 
     # Init carry if it is None
     if train_state.carry is None:
-        with torch.device("cuda"):
+        with torch.device(device):
             train_state.carry = train_state.model.initial_carry(batch)  # type: ignore
 
     # Forward
@@ -276,8 +288,8 @@ def evaluate(config: PretrainConfig, train_state: TrainState, eval_loader: torch
         carry = None
         for set_name, batch, global_batch_size in eval_loader:
             # To device
-            batch = {k: v.cuda() for k, v in batch.items()}
-            with torch.device("cuda"):
+            batch = {k: v.to(device) for k, v in batch.items()}
+            with torch.device(device):
                 carry = train_state.model.initial_carry(batch)  # type: ignore
 
             # Forward
@@ -300,7 +312,7 @@ def evaluate(config: PretrainConfig, train_state: TrainState, eval_loader: torch
             
             if metric_values is None:
                 metric_keys = list(sorted(metrics.keys()))  # Sort keys to guarantee all processes use the same order.
-                metric_values = torch.zeros((len(set_ids), len(metrics.values())), dtype=torch.float32, device="cuda")
+                metric_values = torch.zeros((len(set_ids), len(metrics.values())), dtype=torch.float32, device=device)
                 
             metric_values[set_id] += torch.stack([metrics[k] for k in metric_keys])
             metric_global_batch_size[set_id] += global_batch_size
@@ -383,7 +395,7 @@ def launch(hydra_config: DictConfig):
     WORLD_SIZE = 1
 
     # Initialize distributed training if in distributed environment (e.g. torchrun)
-    if "LOCAL_RANK" in os.environ:
+    if "LOCAL_RANK" in os.environ and device.type == "cuda":
         # Initialize distributed, default device and dtype
         dist.init_process_group(backend="nccl")
 
@@ -394,6 +406,11 @@ def launch(hydra_config: DictConfig):
         
     # Load sync'ed config
     config = load_synced_config(hydra_config, rank=RANK, world_size=WORLD_SIZE)
+
+    # Auto-adjust batch size for Apple-Silicon GPUs
+    if device.type == "mps" and config.global_batch_size > 192:
+        warnings.warn("Reducing global_batch_size to 192 for MPS")
+        config.global_batch_size = 192
 
     # Seed RNGs to ensure consistency
     torch.random.manual_seed(config.seed + RANK)

@@ -110,12 +110,15 @@ def _sparse_emb_signsgd_dist(
     all_weights_grad = local_weights_grad
     all_ids = local_ids
 
-    if world_size > 1:
+    if world_size > 1 and dist.is_available() and dist.is_initialized() and weights.is_cuda:
         all_weights_grad = torch.empty((world_size * N, D), dtype=local_weights_grad.dtype, device=local_weights_grad.device)
         all_ids = torch.empty(world_size * N,               dtype=local_ids.dtype,          device=local_ids.device)
-    
+
         dist.all_gather_into_tensor(all_weights_grad, local_weights_grad)
         dist.all_gather_into_tensor(all_ids,          local_ids)
+    else:
+        all_weights_grad = local_weights_grad
+        all_ids = local_ids
 
     # Unique
     grad_ids, inv = all_ids.unique(return_inverse=True)

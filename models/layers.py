@@ -6,9 +6,10 @@ import torch.nn.functional as F
 
 try:
     from flash_attn_interface import flash_attn_func  # type: ignore[import]
+    _flash_available = True
 except ImportError:
-    # Fallback to FlashAttention 2
-    from flash_attn import flash_attn_func  # type: ignore[import]
+    _flash_available = False  # CUDA-only kernels not present
+    import torch.nn.functional as F  # noqa: F401
 
 from models.common import trunc_normal_init_
 
@@ -126,10 +127,14 @@ class Attention(nn.Module):
             cos, sin = cos_sin
             query, key = apply_rotary_pos_emb(query, key, cos, sin)
 
-        # flash attn
-        attn_output = flash_attn_func(q=query, k=key, v=value, causal=self.causal)
-        if isinstance(attn_output, tuple):  # fa2 and fa3 compatibility
-            attn_output = attn_output[0]
+        if _flash_available and hidden_states.is_cuda:
+            attn_output = flash_attn_func(q=query, k=key, v=value, causal=self.causal)
+            if isinstance(attn_output, tuple):  # fa2 and fa3 compatibility
+                attn_output = attn_output[0]
+        else:
+            attn_output = torch.nn.functional.scaled_dot_product_attention(
+                query, key, value, is_causal=self.causal
+            )
 
         # attn_output: [batch_size, num_heads, seq_len, head_dim]
         attn_output = attn_output.view(batch_size, seq_len, self.output_size)  # type: ignore

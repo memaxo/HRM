@@ -1,6 +1,9 @@
 from typing import List
 import yaml
 import os
+from pretrain import get_default_device
+
+device = get_default_device()
 
 import torch
 import torch.distributed as dist
@@ -22,14 +25,15 @@ def launch():
     RANK = 0
     WORLD_SIZE = 1
     # Initialize distributed training if in distributed environment (e.g. torchrun)
-    if "LOCAL_RANK" in os.environ:
+    if "LOCAL_RANK" in os.environ and device.type == "cuda":
         # Initialize distributed, default device and dtype
         dist.init_process_group(backend="nccl")
 
         RANK = dist.get_rank()
         WORLD_SIZE = dist.get_world_size()
 
-        torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+        if device.type == "cuda":
+            torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
 
     with open(os.path.join(os.path.dirname(eval_cfg.checkpoint), "all_config.yaml"), "r") as f:
         config = PretrainConfig(**yaml.safe_load(f))
@@ -45,9 +49,9 @@ def launch():
     train_state = init_train_state(config, train_metadata, world_size=WORLD_SIZE)
     # Try unwrap torch.compile
     try:
-        train_state.model.load_state_dict(torch.load(eval_cfg.checkpoint, map_location="cuda"), assign=True)
+        train_state.model.load_state_dict(torch.load(eval_cfg.checkpoint, map_location=device), assign=True)
     except:
-        train_state.model.load_state_dict({k.removeprefix("_orig_mod."): v for k, v in torch.load(eval_cfg.checkpoint, map_location="cuda").items()}, assign=True)
+        train_state.model.load_state_dict({k.removeprefix("_orig_mod."): v for k, v in torch.load(eval_cfg.checkpoint, map_location=device).items()}, assign=True)
     
     train_state.step = 0
     ckpt_filename = os.path.basename(eval_cfg.checkpoint)
