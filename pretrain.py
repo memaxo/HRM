@@ -110,7 +110,8 @@ def create_dataloader(config: PretrainConfig, split: str, rank: int, world_size:
         num_workers=1,
         prefetch_factor=8,
 
-        pin_memory=True,
+        # Only pin memory on CUDA; MPS does not support pin_memory
+        pin_memory=(device.type == "cuda"),
         persistent_workers=True
     )
     return dataloader, dataset.metadata
@@ -158,8 +159,7 @@ def create_model(config: PretrainConfig, train_metadata: PuzzleDatasetMetadata, 
         ),
         AdamAtan2(
             model.parameters(),
-
-            lr=0,  # Needs to be set by scheduler
+            lr=config.lr,  # Initialize with configured lr (scheduler will update each step)
             weight_decay=config.weight_decay,
             betas=(config.beta1, config.beta2)
         )
