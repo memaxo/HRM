@@ -2,10 +2,10 @@
 torch>=2.3.0.dev
 torchvision
 torchaudio
-xformers>=0.0.25
+# xformers>=0.0.25  # temporarily disabled for macOS compatibility
 
 # Algorithms / utilities
-adam-atan2
+adam-atan2-pytorch
 einops
 tqdm
 coolname
